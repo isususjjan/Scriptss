@@ -1,0 +1,21 @@
+-- 🧠 Brlin Spy — أداة كشف أسرار اللعبة 🧠
+
+print("═══ 🧠 Brlin Spy Started ═══")
+
+local function show(owner, name, kind)
+print("📡 " .. tostring(name) .. " (" .. kind .. ")")
+end
+
+local function scan(folder, path, depth)
+if depth > 4 then return end
+for _, obj in pairs(folder:GetChildren()) do
+if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+show(obj, path .. "/" .. obj.Name, obj.ClassName)
+end
+scan(obj, path .. "/" .. obj.Name, depth + 1)
+end
+end
+
+scan(game.ReplicatedStorage, "RS", 0)
+
+print("═══ ✅ Spy Finished ═══")
