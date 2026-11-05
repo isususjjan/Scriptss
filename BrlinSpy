@@ -1,3 +1,6 @@
+--[[🌐 BrlinSpy — REMOTE FILE (FIXED VERSION)
+    👑 Brlin Funny Gamer  |  🤝 Z.ai]]
+
 gg.clearResults()
 gg.setRanges(gg.REGION_C_DATA)
 gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
@@ -7,17 +10,17 @@ local gg = gg
 
 function getShortName(str)
   local a = str:gsub('.+/', '')
-  if a:find(':') then a= a:gsub(':.+', '') end
+  if a:find(':') then a = a:gsub(':.+', '') end
   return a
 end
 
 function getLibAndBase(var)
   local name, base = {}, {}
   for i, v in ipairs(var) do
-    if v.type:sub(3,3)=='x' then
-      local a={{address=v.start,flags=4}}
-      local a = gg.getValues(a)
-      if a[1].value==0x464C457F then
+    if v.type:sub(3,3) == 'x' then
+      local a = {{address = v.start, flags = 4}}
+      a = gg.getValues(a)
+      if a[1].value == 0x464C457F then
         table.insert(name, getShortName(v.internalName))
         table.insert(base, v.start)
       end
@@ -28,24 +31,32 @@ end
 
 function checkAndReturn()
   local res = gg.getResults(gg.getResultsCount())
-  if #res==0 then return print('NO ANY HOOK OFFSET') end
-  
+  if #res == 0 then
+    print('NO ANY HOOK OFFSET')
+    return nil
+  end
+
   local pk = gg.getTargetInfo().packageName
   local lib = gg.getRangesList('/data/*'..pk..'*.so')
-  if #lib==0 then
-      if #gg.getRangesList('/data/*'..pk..'*.apk')>0 then return print('This is split apk. script cant get the valid lib name') end
-  return print('no lib is found') end
-  
+  if #lib == 0 then
+    if #gg.getRangesList('/data/*'..pk..'*.apk') > 0 then
+      print('This is split apk. script cant get the valid lib name')
+    else
+      print('no lib is found')
+    end
+    return nil
+  end
+
   local name, base = getLibAndBase(lib)
-  local t={}
+  local t = {}
   for i, v in ipairs(res) do
     for a, b in ipairs(lib) do
-      if v.address>=b.start and v.address<b['end'] then
+      if v.address >= b.start and v.address < b['end'] then
         for c, d in ipairs(name) do
           local sn = getShortName(b.internalName)
-          if sn==d then
-            v.lib=d
-            v.offset='0x'..string.format('%x', v.address-base[c])
+          if sn == d then
+            v.lib = d
+            v.offset = '0x' .. string.format('%x', v.address - base[c])
             table.insert(t, v)
           end
         end
@@ -55,14 +66,13 @@ function checkAndReturn()
   return t
 end
 
-
-
 local valueTable = checkAndReturn()
-for i, v in ipairs(valueTable) do
-gg.alert(v.lib..'    |    '..v.offset)
-gg.print(v.lib..'    |    '..v.offset)
+if valueTable ~= nil then
+  for i, v in ipairs(valueTable) do
+    gg.alert(v.lib .. '    |    ' .. v.offset)
+    gg.print(v.lib .. '    |    ' .. v.offset)
+  end
 end
 
 gg.clearResults()
 gg.setVisible(true)
-end
