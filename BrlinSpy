@@ -1,84 +1,68 @@
---[[═══════════════════════════════════════════════════
- 🌐 BR LIN LOADER v1.0 — محمل الأكواد من الإنترنت
- 🚀 Rocket Royale Edition
- 👑 Brlin Funny Gamer  |  🤝 الشريك التقني: Z.ai
-═══════════════════════════════════════════════════]]
-
--- ⚙️⚙️⚙️ الإعدادات — عدّل هنا فقط ⚙️⚙️⚙️
-local PASSWORD = 'Brlin2026'   -- 🔑 كلمة السر
-local URL = 'https://raw.githubusercontent.com/USERNAME/REPO/main/BrlinRocket.lua'  -- 🌐 بدّل الرابط!
-
-local SCRIPT_DIR = gg.getFile():match('^(.*)/')
-local CACHE_FILE = SCRIPT_DIR .. '/BrlinCache.lua'
-
--- ═══════════ 🔑 كلمة السر ═══════════
-local function PasswordScreen()
-  for i = 1, 3 do
-    local p = gg.prompt({'🔑 ادخل كلمة السر:'}, {[1] = ''}, {'text'})
-    if p == nil then
-      gg.toast('👋 باي باي!')
-      gg.sleep(500)
-      os.exit()
-    end
-    if p[1] == PASSWORD then
-      gg.toast('✅ أهلاً يا Brlin 👑')
-      gg.sleep(600)
-      return
-    end
-    local left = 3 - i
-    if left > 0 then
-      gg.alert('❌ كلمة السر غلط!\nمحاولات باقية: ' .. left)
-    else
-      gg.alert('⛔ انتهت المحاولات')
-      os.exit()
-    end
-  end
-end
-
--- ═══════════ 🌐 جلب الكود من السيرفر ═══════════
-local function FetchCode()
-  gg.toast('🌐 جارٍ جلب الكود من السيرفر...')
-  local res = gg.makeRequest(URL)
-  if res ~= nil and res.code == 200 and res.message ~= nil and #res.message > 10 then
-    -- نجح التحميل — خزّن نسخة احتياطية للأوفلاين
-    local f = io.open(CACHE_FILE, 'w')
-    if f then
-      f:write(res.message)
-      f:close()
-    end
-    return res.message, true
-  end
-  -- فشل التحميل — جرب النسخة المحفوظة
-  local f = io.open(CACHE_FILE, 'r')
-  if f then
-    local cached = f:read('*a')
-    f:close()
-    if cached ~= nil and #cached > 10 then
-      local c = gg.alert('⚠️ ما قدرت أوصل للسيرفر!\n\nتشغل النسخة المحفوظة (أوفلاين)؟', '✅ نعم شغلها', '❌ لا')
-      if c == 1 then return cached, false end
-    end
-  end
-  return nil, false
-end
-
--- ═══════════ ▶️ التشغيل ═══════════
+gg.clearResults()
+gg.setRanges(gg.REGION_C_DATA)
+gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
 gg.setVisible(false)
-gg.toast('🌐 BR LIN LOADER — جارٍ التشغيل...')
-gg.sleep(500)
-PasswordScreen()
 
-local code, online = FetchCode()
-if code == nil then
-  gg.alert('❌ ما حصلت أي كود!\n\n✔️ تأكد من الإنترنت\n✔️ تأكد أن الرابط RAW وصح')
-  os.exit()
+local gg = gg
+
+function getShortName(str)
+  local a = str:gsub('.+/', '')
+  if a:find(':') then a= a:gsub(':.+', '') end
+  return a
 end
 
-local fn = (loadstring or load)(code)
-if fn == nil then
-  gg.alert('❌ الكود اللي بالسيرفر فيه خطأ!\nراجع الملف على GitHub')
-  os.exit()
+function getLibAndBase(var)
+  local name, base = {}, {}
+  for i, v in ipairs(var) do
+    if v.type:sub(3,3)=='x' then
+      local a={{address=v.start,flags=4}}
+      local a = gg.getValues(a)
+      if a[1].value==0x464C457F then
+        table.insert(name, getShortName(v.internalName))
+        table.insert(base, v.start)
+      end
+    end
+  end
+  return name, base
 end
 
-gg.toast(online and '🟢 متصل — الكود وصل مباشرة من السيرفر!' or '🟡 أوفلاين — تشغل النسخة المحفوظة')
-gg.sleep(700)
-fn()  -- 🚀 تنفيذ الكود الحقيقي من السيرفر
+function checkAndReturn()
+  local res = gg.getResults(gg.getResultsCount())
+  if #res==0 then return print('NO ANY HOOK OFFSET') end
+  
+  local pk = gg.getTargetInfo().packageName
+  local lib = gg.getRangesList('/data/*'..pk..'*.so')
+  if #lib==0 then
+      if #gg.getRangesList('/data/*'..pk..'*.apk')>0 then return print('This is split apk. script cant get the valid lib name') end
+  return print('no lib is found') end
+  
+  local name, base = getLibAndBase(lib)
+  local t={}
+  for i, v in ipairs(res) do
+    for a, b in ipairs(lib) do
+      if v.address>=b.start and v.address<b['end'] then
+        for c, d in ipairs(name) do
+          local sn = getShortName(b.internalName)
+          if sn==d then
+            v.lib=d
+            v.offset='0x'..string.format('%x', v.address-base[c])
+            table.insert(t, v)
+          end
+        end
+      end
+    end
+  end
+  return t
+end
+
+
+
+local valueTable = checkAndReturn()
+for i, v in ipairs(valueTable) do
+gg.alert(v.lib..'    |    '..v.offset)
+gg.print(v.lib..'    |    '..v.offset)
+end
+
+gg.clearResults()
+gg.setVisible(true)
+end
