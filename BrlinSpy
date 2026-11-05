@@ -1,97 +1,68 @@
+gg.clearResults()
+gg.setRanges(gg.REGION_C_DATA)
+gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
 gg.setVisible(false)
 
+local gg = gg
 
 function getShortName(str)
   local a = str:gsub('.+/', '')
-  if a:find(':') then a = a:gsub(':.+', '') end
+  if a:find(':') then a= a:gsub(':.+', '') end
   return a
 end
 
-local ok, err = pcall(function()
-
-  gg.clearResults()
-  gg.setRanges(gg.REGION_C_DATA)
-  gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
-
-  local count = gg.getResultsCount()
-
-  if count == 0 then
-    gg.alert('⚠️ The search found NOTHING.\nMaybe wrong value or not found offset here❌🙂')
-    return
-  end
-
-  local res = gg.getResults(count)
-
-  local pk = tostring(gg.getTargetInfo().packageName)
-  local lib = gg.getRangesList('/data/*'..pk..'*.so')
-
-  if #lib == 0 then
-    local apk = gg.getRangesList('/data/*'..pk..'*.apk')
-    gg.alert('⚠️ NO .so RANGES FOUND!\npackage = ' .. pk .. '\napk ranges = ' .. #apk)
-    return
-  end
-
-  -- collect valid ELF libs (nil-safe type check — this fixed the crash!)
+function getLibAndBase(var)
   local name, base = {}, {}
-  for i, v in ipairs(lib) do
-    local t = tostring(v.type)
-    if t:sub(3,3) == 'x' then
-      local a = {{address = v.start, flags = 4}}
-      a = gg.getValues(a)
-      if a[1].value == 0x464C457F then
+  for i, v in ipairs(var) do
+    if v.type:sub(3,3)=='x' then
+      local a={{address=v.start,flags=4}}
+      local a = gg.getValues(a)
+      if a[1].value==0x464C457F then
         table.insert(name, getShortName(v.internalName))
         table.insert(base, v.start)
       end
     end
   end
+  return name, base
+end
 
-  if #name == 0 then
-    gg.alert('⚠️ Ranges exist but no valid ELF lib found!')
-    return
-  end
-
-  -- match results to libs
-  local t = {}
+function checkAndReturn()
+  local res = gg.getResults(gg.getResultsCount())
+  if #res==0 then return print('NO ANY HOOK OFFSET') end
+  
+  local pk = gg.getTargetInfo().packageName
+  local lib = gg.getRangesList('/data/*'..pk..'*.so')
+  if #lib==0 then
+      if #gg.getRangesList('/data/*'..pk..'*.apk')>0 then return print('This is split apk. script cant get the valid lib name') end
+  return print('no lib is found') end
+  
+  local name, base = getLibAndBase(lib)
+  local t={}
   for i, v in ipairs(res) do
     for a, b in ipairs(lib) do
-      if v.address >= b.start and v.address < b['end'] then
+      if v.address>=b.start and v.address<b['end'] then
         for c, d in ipairs(name) do
           local sn = getShortName(b.internalName)
-          if sn == d then
-            v.lib = d
-            v.offset = '0x' .. string.format('%x', v.address - base[c])
+          if sn==d then
+            v.lib=d
+            v.offset='0x'..string.format('%x', v.address-base[c])
             table.insert(t, v)
           end
         end
       end
     end
   end
+  return t
+end
 
-  if #t == 0 then
-    gg.alert('⚠️ Search results exist but matched NO lib!\ncount = ' .. count)
-    return
-  end
 
-  -- 📺 show every offset (one alert each)
-  for i, v in ipairs(t) do
-    gg.alert(v.lib .. '    |    ' .. v.offset)
-  end
 
-  gg.clearResults()
+local valueTable = checkAndReturn()
+for i, v in ipairs(valueTable) do
+gg.alert(v.lib..'    |    '..v.offset)
+gg.copyText(v.lib..'    |    '..v.offset)
+end
 
-  -- 🖨 PRINT ALL OFFSETS AT THE END (final summary)
-  gg.print('═══ BR LIN HOOK OFFSETS (' .. #t .. ') ═══')
-  for i, v in ipairs(t) do
-    gg.print(i .. ')  ' .. v.lib .. '    |    ' .. v.offset)
-  end
-end)
-
+gg.clearResults()
 gg.setVisible(true)
-
-if ok then
-  HackingIsTheGame = 1   -- 🚩 success flag — loader needs this!
-  gg.toast('✅ Done — full list in print log 🖨')
-else
-  gg.alert('× CRASH ×\n' .. tostring(err) .. '\n\n📸 Send this to Brlin Funny Gamer', 'EXIT')
-  print('CRASH: ' .. tostring(err))
 end
