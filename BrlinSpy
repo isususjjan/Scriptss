@@ -1,7 +1,5 @@
---[[🌐 BrlinSpy — DEBUG SELF-REPORTING VERSION
-    👑 Brlin Funny Gamer  |  🤝 Z.ai]]
-
 gg.setVisible(false)
+
 
 function getShortName(str)
   local a = str:gsub('.+/', '')
@@ -11,35 +9,29 @@ end
 
 local ok, err = pcall(function()
 
-  gg.toast('🧪 STEP 1: search starting...')
   gg.clearResults()
   gg.setRanges(gg.REGION_C_DATA)
   gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
 
   local count = gg.getResultsCount()
-  gg.toast('🧪 STEP 2: search done — results = ' .. tostring(count))
 
   if count == 0 then
-    gg.alert('🧪 RESULT: the search found NOTHING.\n(This is not a crash — maybe wrong value or region)')
+    gg.alert('⚠️ The search found NOTHING.\nMaybe wrong value or not found offset here❌🙂')
     return
   end
 
   local res = gg.getResults(count)
-  gg.toast('🧪 STEP 3: getResults OK — # = ' .. #res)
 
-  gg.toast('🧪 STEP 4: reading target info...')
   local pk = tostring(gg.getTargetInfo().packageName)
-  gg.toast('🧪 STEP 5: package = ' .. pk)
-
   local lib = gg.getRangesList('/data/*'..pk..'*.so')
-  gg.toast('🧪 STEP 6: lib ranges found = ' .. #lib)
 
   if #lib == 0 then
     local apk = gg.getRangesList('/data/*'..pk..'*.apk')
-    gg.alert('🧪 NO .so RANGES FOUND!\npackage = ' .. pk .. '\napk ranges = ' .. #apk)
+    gg.alert('⚠️ NO .so RANGES FOUND!\npackage = ' .. pk .. '\napk ranges = ' .. #apk)
     return
   end
 
+  -- collect valid ELF libs (nil-safe type check — this fixed the crash!)
   local name, base = {}, {}
   for i, v in ipairs(lib) do
     local t = tostring(v.type)
@@ -52,13 +44,13 @@ local ok, err = pcall(function()
       end
     end
   end
-  gg.toast('🧪 STEP 7: valid libs = ' .. #name)
 
   if #name == 0 then
-    gg.alert('🧪 Ranges exist but no valid ELF lib found!')
+    gg.alert('⚠️ Ranges exist but no valid ELF lib found!')
     return
   end
 
+  -- match results to libs
   local t = {}
   for i, v in ipairs(res) do
     for a, b in ipairs(lib) do
@@ -74,26 +66,32 @@ local ok, err = pcall(function()
       end
     end
   end
-  gg.toast('🧪 STEP 8: matched hook offsets = ' .. #t)
 
   if #t == 0 then
-    gg.alert('🧪 Search results exist but matched NO lib!\ncount = ' .. count)
+    gg.alert('⚠️ Search results exist but matched NO lib!\ncount = ' .. count)
     return
   end
 
+  -- 📺 show every offset (one alert each)
   for i, v in ipairs(t) do
     gg.alert(v.lib .. '    |    ' .. v.offset)
   end
 
   gg.clearResults()
+
+  -- 🖨 PRINT ALL OFFSETS AT THE END (final summary)
+  gg.print('═══ BR LIN HOOK OFFSETS (' .. #t .. ') ═══')
+  for i, v in ipairs(t) do
+    gg.print(i .. ')  ' .. v.lib .. '    |    ' .. v.offset)
+  end
 end)
 
 gg.setVisible(true)
 
 if ok then
   HackingIsTheGame = 1   -- 🚩 success flag — loader needs this!
-  gg.toast('🧪 DEBUG: ALL STEPS PASSED ✅')
+  gg.toast('✅ Done — full list in print log 🖨')
 else
-  gg.alert('🧪🧪 CRASH LOCATION FOUND! 🧪🧪\n\nThe script died with this error:\n\n' .. tostring(err) .. '\n\n📸 Send this to Z.ai!', 'EXIT')
-  print('DEBUG CRASH: ' .. tostring(err))
+  gg.alert('× CRASH ×\n' .. tostring(err) .. '\n\n📸 Send this to Brlin Funny Gamer', 'EXIT')
+  print('CRASH: ' .. tostring(err))
 end
