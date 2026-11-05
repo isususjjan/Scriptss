@@ -1,21 +1,84 @@
--- 🧠 Brlin Spy — أداة كشف أسرار اللعبة 🧠
+--[[═══════════════════════════════════════════════════
+ 🌐 BR LIN LOADER v1.0 — محمل الأكواد من الإنترنت
+ 🚀 Rocket Royale Edition
+ 👑 Brlin Funny Gamer  |  🤝 الشريك التقني: Z.ai
+═══════════════════════════════════════════════════]]
 
-print("═══ 🧠 Brlin Spy Started ═══")
+-- ⚙️⚙️⚙️ الإعدادات — عدّل هنا فقط ⚙️⚙️⚙️
+local PASSWORD = 'Brlin2026'   -- 🔑 كلمة السر
+local URL = 'https://raw.githubusercontent.com/USERNAME/REPO/main/BrlinRocket.lua'  -- 🌐 بدّل الرابط!
 
-local function show(owner, name, kind)
-print("📡 " .. tostring(name) .. " (" .. kind .. ")")
+local SCRIPT_DIR = gg.getFile():match('^(.*)/')
+local CACHE_FILE = SCRIPT_DIR .. '/BrlinCache.lua'
+
+-- ═══════════ 🔑 كلمة السر ═══════════
+local function PasswordScreen()
+  for i = 1, 3 do
+    local p = gg.prompt({'🔑 ادخل كلمة السر:'}, {[1] = ''}, {'text'})
+    if p == nil then
+      gg.toast('👋 باي باي!')
+      gg.sleep(500)
+      os.exit()
+    end
+    if p[1] == PASSWORD then
+      gg.toast('✅ أهلاً يا Brlin 👑')
+      gg.sleep(600)
+      return
+    end
+    local left = 3 - i
+    if left > 0 then
+      gg.alert('❌ كلمة السر غلط!\nمحاولات باقية: ' .. left)
+    else
+      gg.alert('⛔ انتهت المحاولات')
+      os.exit()
+    end
+  end
 end
 
-local function scan(folder, path, depth)
-if depth > 4 then return end
-for _, obj in pairs(folder:GetChildren()) do
-if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-show(obj, path .. "/" .. obj.Name, obj.ClassName)
-end
-scan(obj, path .. "/" .. obj.Name, depth + 1)
-end
+-- ═══════════ 🌐 جلب الكود من السيرفر ═══════════
+local function FetchCode()
+  gg.toast('🌐 جارٍ جلب الكود من السيرفر...')
+  local res = gg.makeRequest(URL)
+  if res ~= nil and res.code == 200 and res.message ~= nil and #res.message > 10 then
+    -- نجح التحميل — خزّن نسخة احتياطية للأوفلاين
+    local f = io.open(CACHE_FILE, 'w')
+    if f then
+      f:write(res.message)
+      f:close()
+    end
+    return res.message, true
+  end
+  -- فشل التحميل — جرب النسخة المحفوظة
+  local f = io.open(CACHE_FILE, 'r')
+  if f then
+    local cached = f:read('*a')
+    f:close()
+    if cached ~= nil and #cached > 10 then
+      local c = gg.alert('⚠️ ما قدرت أوصل للسيرفر!\n\nتشغل النسخة المحفوظة (أوفلاين)؟', '✅ نعم شغلها', '❌ لا')
+      if c == 1 then return cached, false end
+    end
+  end
+  return nil, false
 end
 
-scan(game.ReplicatedStorage, "RS", 0)
+-- ═══════════ ▶️ التشغيل ═══════════
+gg.setVisible(false)
+gg.toast('🌐 BR LIN LOADER — جارٍ التشغيل...')
+gg.sleep(500)
+PasswordScreen()
 
-print("═══ ✅ Spy Finished ═══")
+local code, online = FetchCode()
+if code == nil then
+  gg.alert('❌ ما حصلت أي كود!\n\n✔️ تأكد من الإنترنت\n✔️ تأكد أن الرابط RAW وصح')
+  os.exit()
+end
+
+local fn = (loadstring or load)(code)
+if fn == nil then
+  gg.alert('❌ الكود اللي بالسيرفر فيه خطأ!\nراجع الملف على GitHub')
+  os.exit()
+end
+
+gg.toast(online and '🟢 متصل — الكود وصل مباشرة من السيرفر!' or '🟡 أوفلاين — تشغل النسخة المحفوظة')
+gg.sleep(700)
+fn()  -- 🚀 تنفيذ الكود الحقيقي من السيرفر
