@@ -1,12 +1,7 @@
---[[🌐 BrlinSpy — REMOTE FILE (FIXED VERSION)
+--[[🌐 BrlinSpy — DEBUG SELF-REPORTING VERSION
     👑 Brlin Funny Gamer  |  🤝 Z.ai]]
 
-gg.clearResults()
-gg.setRanges(gg.REGION_C_DATA)
-gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
 gg.setVisible(false)
-
-local gg = gg
 
 function getShortName(str)
   local a = str:gsub('.+/', '')
@@ -14,10 +9,41 @@ function getShortName(str)
   return a
 end
 
-function getLibAndBase(var)
+local ok, err = pcall(function()
+
+  gg.toast('🧪 STEP 1: search starting...')
+  gg.clearResults()
+  gg.setRanges(gg.REGION_C_DATA)
+  gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
+
+  local count = gg.getResultsCount()
+  gg.toast('🧪 STEP 2: search done — results = ' .. tostring(count))
+
+  if count == 0 then
+    gg.alert('🧪 RESULT: the search found NOTHING.\n(This is not a crash — maybe wrong value or region)')
+    return
+  end
+
+  local res = gg.getResults(count)
+  gg.toast('🧪 STEP 3: getResults OK — # = ' .. #res)
+
+  gg.toast('🧪 STEP 4: reading target info...')
+  local pk = tostring(gg.getTargetInfo().packageName)
+  gg.toast('🧪 STEP 5: package = ' .. pk)
+
+  local lib = gg.getRangesList('/data/*'..pk..'*.so')
+  gg.toast('🧪 STEP 6: lib ranges found = ' .. #lib)
+
+  if #lib == 0 then
+    local apk = gg.getRangesList('/data/*'..pk..'*.apk')
+    gg.alert('🧪 NO .so RANGES FOUND!\npackage = ' .. pk .. '\napk ranges = ' .. #apk)
+    return
+  end
+
   local name, base = {}, {}
-  for i, v in ipairs(var) do
-    if v.type:sub(3,3) == 'x' then
+  for i, v in ipairs(lib) do
+    local t = tostring(v.type)
+    if t:sub(3,3) == 'x' then
       local a = {{address = v.start, flags = 4}}
       a = gg.getValues(a)
       if a[1].value == 0x464C457F then
@@ -26,28 +52,13 @@ function getLibAndBase(var)
       end
     end
   end
-  return name, base
-end
+  gg.toast('🧪 STEP 7: valid libs = ' .. #name)
 
-function checkAndReturn()
-  local res = gg.getResults(gg.getResultsCount())
-  if #res == 0 then
-    print('NO ANY HOOK OFFSET')
-    return nil
+  if #name == 0 then
+    gg.alert('🧪 Ranges exist but no valid ELF lib found!')
+    return
   end
 
-  local pk = gg.getTargetInfo().packageName
-  local lib = gg.getRangesList('/data/*'..pk..'*.so')
-  if #lib == 0 then
-    if #gg.getRangesList('/data/*'..pk..'*.apk') > 0 then
-      print('This is split apk. script cant get the valid lib name')
-    else
-      print('no lib is found')
-    end
-    return nil
-  end
-
-  local name, base = getLibAndBase(lib)
   local t = {}
   for i, v in ipairs(res) do
     for a, b in ipairs(lib) do
@@ -63,21 +74,26 @@ function checkAndReturn()
       end
     end
   end
-  return t
-end
+  gg.toast('🧪 STEP 8: matched hook offsets = ' .. #t)
 
-local valueTable = checkAndReturn()
-if valueTable ~= nil then
-  for i, v in ipairs(valueTable) do
-    gg.print(v.lib .. '    |    ' .. v.offset)
-    gg.print(v.lib .. '    |    ' .. v.offset)
-gg.toast("Done ✅")
+  if #t == 0 then
+    gg.alert('🧪 Search results exist but matched NO lib!\ncount = ' .. count)
+    return
   end
-end
 
-gg.clearResults()
+  for i, v in ipairs(t) do
+    gg.alert(v.lib .. '    |    ' .. v.offset)
+  end
+
+  gg.clearResults()
+end)
+
 gg.setVisible(true)
 
-
-
-HackingIsTheGame = 1   -- 🚩 success flag — loader needs this!
+if ok then
+  HackingIsTheGame = 1   -- 🚩 success flag — loader needs this!
+  gg.toast('🧪 DEBUG: ALL STEPS PASSED ✅')
+else
+  gg.alert('🧪🧪 CRASH LOCATION FOUND! 🧪🧪\n\nThe script died with this error:\n\n' .. tostring(err) .. '\n\n📸 Send this to Z.ai!', 'EXIT')
+  print('DEBUG CRASH: ' .. tostring(err))
+end
