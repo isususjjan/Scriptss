@@ -1,20 +1,9 @@
---[[🌐 BrlinSpy v3 — FINAL FIXED (syntax-checked ✅)
-    👑 Brlin Funny Gamer  |  🤝 Z.ai
-    ⛔ THE ERROR WAS: a stray 'end' on the LAST line.
-       Lua reads the WHOLE file before running anything —
-       one extra 'end' = the whole file is rejected = Error.
-    ✅ WHAT IS NEW:
-       • nil-safe: no results / no lib → clear reason, never crashes
-       • PRINTS ALL OFFSETS at the end (GG log 🖨) + copies the summary
-       • sets HackingIsTheGame = 1 on success (loader accepts it)
-    Upload to GitHub as: BrlinSpy (replace ALL content)]]
-
-HackingIsTheGame = 0   -- 🚩 loader flag — becomes 1 only on full success
+HackingIsTheGame = 0
 
 gg.clearResults()
 gg.setRanges(gg.REGION_C_DATA)
 gg.searchNumber("-450891772", gg.TYPE_DWORD, false, gg.SIGN_EQUAL, 0, -1, 0)
-gg.setVisible(false)
+pcall(gg.setVisible, false)
 
 local gg = gg
 
@@ -53,10 +42,11 @@ function checkAndReturn()
   end
 
   local name, base = getLibAndBase(lib)
+  local finish = string.char(101, 110, 100)
   local t={}
   for i, v in ipairs(res) do
     for a, b in ipairs(lib) do
-      if v.address>=b.start and v.address<b['end'] then
+      if v.address>=b.start and v.address<b[finish] then
         for c, d in ipairs(name) do
           local sn = getShortName(b.internalName)
           if sn==d then
@@ -79,22 +69,29 @@ if type(valueTable) ~= 'table' or #valueTable == 0 then
   error('BrlinSpy failed - '..why, 0)
 end
 
--- 📺 show every offset (one alert each) + collect the summary
+
 local summary = ''
 for i, v in ipairs(valueTable) do
   local line = v.lib..'    |    '..v.offset
-  gg.alert(line)
-  gg.copyText(line)
+  pcall(gg.alert, line)
+  pcall(gg.copyText, line)
   summary = summary..i..') '..line..'\n'
 end
 
-gg.clearResults()
-gg.setVisible(true)
 
--- 🖨 YOUR REQUEST: all offsets printed together at the END (GG log)
-gg.print('═══ BR LIN HOOK OFFSETS ('..#valueTable..') ═══\n'..summary)
-gg.copyText(summary)
+HackingIsTheGame = 1
 
-gg.toast('✅ Done — '..#valueTable..' offset(s): summary in log 🖨 + clipboard')
 
-HackingIsTheGame = 1   -- 🚩 success flag — loader needs this!
+pcall(gg.clearResults)
+pcall(gg.setVisible, true)
+
+if gg.print ~= nil then
+  pcall(gg.print, 'BRLIN HOOK OFFSETS ('..#valueTable..')\n'..summary)
+end
+
+pcall(gg.copyText, summary)
+
+
+pcall(gg.alert, 'BRLIN HOOK OFFSETS ('..#valueTable..')\n\n'..summary..'\n📋 Full summary copied to clipboard!')
+
+pcall(gg.toast, '✅ Done — '..#valueTable..' offset(s)')
